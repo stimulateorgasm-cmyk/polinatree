@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --color-brand-red: #A30012; /* Deep luxury velvet red */
+  --color-brand-red-light: #FDF2F3;
+  --color-brand-gold: #C89B3C;
+  --color-brand-gold-light: #FAF4E8;
+  --color-brand-dark: #222222;
+  --color-brand-muted: #6E6861; /* Warm muted taupe */
+  --color-brand-cream: #FAF6F0; /* Soft warm cashmere/powder background */
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-brand-dark);
+  background-color: var(--color-brand-cream);
+  margin: 0;
+  padding: 0;
+}
+
+/* Base style resets and scroll transitions */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom visual styles if fine-tuning is needed */
+.title-font {
+  font-family: var(--font-serif);
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.pulse-gold {
+  animation: pulse-subtle 3s infinite ease-in-out;
+}
+

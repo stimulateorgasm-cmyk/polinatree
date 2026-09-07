@@ -1,0 +1,6 @@
+{
+  "name": "Полина Red — Дерево ссылок",
+  "description": "Сайт-визитка и дерево ссылок для секс-терапевта и психолога Полины Red",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
