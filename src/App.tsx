@@ -1,25 +1,28 @@
 import { useState, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sparkles, 
-  Gift, 
-  Send, 
-  BookOpen, 
-  Crown, 
-  Youtube, 
-  Instagram, 
-  ArrowUpRight, 
-  X, 
-  Share2, 
-  Check, 
-  ShieldCheck, 
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  Sparkles,
+  Gift,
+  Send,
+  BookOpen,
+  Crown,
+  Youtube,
+  Instagram,
+  ArrowUpRight,
+  X,
+  Share2,
+  Check,
+  ShieldCheck,
   FileText,
   Bookmark,
   RefreshCw,
   Heart,
   ExternalLink,
   Flame,
-  Award
+  Award,
+  QrCode,
+  UserPlus
 } from 'lucide-react';
 
 interface LinkItem {
@@ -37,6 +40,8 @@ interface LinkItem {
 export default function App() {
   const [copied, setCopied] = useState(false);
   const [activeModal, setActiveModal] = useState<'privacy' | 'offer' | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [contactHint, setContactHint] = useState(false);
   
   // Interactive Method Tab Selection State
   const [activeTab, setActiveTab] = useState<'body' | 'mind' | 'club'>('body');
@@ -144,9 +149,62 @@ export default function App() {
     }
   ];
 
+  // Визитка (vCard) Полины Red — данные для «Сохранить контакт» и QR-кода
+  const vcardLines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN;CHARSET=utf-8:Полина Red',
+    'N;CHARSET=utf-8:Red;Полина;;;',
+    'TITLE;CHARSET=utf-8:Психолог, телесный и секс-терапевт',
+    'ORG;CHARSET=utf-8:polinared.ru',
+    'EMAIL:info@polinared.ru',
+    'URL:https://links.polinared.ru',
+    'X-SOCIALPROFILE;TYPE=telegram:https://t.me/+8v9rmK0aKIg3ZDUy',
+    'X-SOCIALPROFILE;TYPE=instagram:https://www.instagram.com/polinared_sexologist',
+    'END:VCARD'
+  ];
+  const vcardString = vcardLines.join('\r\n');
+
+  // Встроенный браузер Instagram/Facebook блокирует скачивание файла — показываем подсказку
+  const isInAppBrowser = () => {
+    const ua = navigator.userAgent || '';
+    return /Instagram/i.test(ua) || /\bFBAN\b/i.test(ua) || /\bFB_IAB\b/i.test(ua);
+  };
+
+  const handleSaveContact = () => {
+    if (isInAppBrowser()) {
+      setContactHint(true);
+      return;
+    }
+    const blob = new Blob([vcardString], { type: 'text/vcard;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'polina-red.vcf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleShare = async () => {
+    const url = window.location.href;
+    // Нативный шеринг (iOS/Android) — сначала он
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Полина Red',
+          text: 'Психолог · Телесность · Сексология',
+          url
+        });
+        return;
+      } catch {
+        // Пользователь закрыл системный диалог — молча выходим
+      }
+    }
+    // Fallback — копируем ссылку
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -188,26 +246,50 @@ export default function App() {
         <div className="absolute top-1/3 -left-16 w-80 h-80 bg-radial from-brand-red/[0.03] to-transparent rounded-full blur-2xl"></div>
       </div>
 
-      {/* Share / Action Bar */}
-      <div className="w-full max-w-[480px] px-5 pt-3 flex justify-end relative z-10">
-        <button 
-          id="share-button"
-          onClick={handleShare}
-          className="py-2 px-3.5 rounded-full border border-brand-gold/20 hover:border-brand-red/30 bg-white/70 backdrop-blur-md text-brand-muted hover:text-brand-red transition-all duration-300 relative group flex items-center gap-1.5 focus:outline-none shadow-xs active:scale-95 cursor-pointer text-xs font-medium"
-          title="Поделиться этой страницей"
-        >
-          {copied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-emerald-700 font-sans">Ссылка скопирована</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="w-3.5 h-3.5 text-brand-muted group-hover:text-brand-red transition-colors" />
-              <span className="font-sans tracking-wide">Поделиться</span>
-            </>
-          )}
-        </button>
+      {/* Action Bar: сохранить / написать / QR / поделиться — компактные иконки, как у Антона */}
+      <div className="w-full max-w-[480px] px-5 pt-3 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-2.5">
+          <button
+            id="save-contact"
+            onClick={handleSaveContact}
+            title="Сохранить контакт"
+            aria-label="Сохранить контакт"
+            className="p-3.5 rounded-2xl bg-white border border-brand-gold/25 hover:border-brand-red/40 hover:shadow-[0_6px_18px_rgba(163,0,18,0.08)] active:scale-95 transition-all text-brand-red cursor-pointer"
+          >
+            <UserPlus className="w-6 h-6" />
+          </button>
+          <a
+            id="write-tg"
+            href="https://t.me/+8v9rmK0aKIg3ZDUy"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Написать в личку"
+            aria-label="Написать в личку"
+            className="p-3.5 rounded-2xl bg-white border border-brand-gold/25 hover:border-brand-red/40 hover:shadow-[0_6px_18px_rgba(163,0,18,0.08)] active:scale-95 transition-all text-brand-red cursor-pointer"
+          >
+            <Send className="w-6 h-6" />
+          </a>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button
+            id="show-qr"
+            onClick={() => setQrOpen(true)}
+            title="QR-визитка"
+            aria-label="QR-визитка"
+            className="p-3.5 rounded-2xl bg-white border border-brand-gold/25 hover:border-brand-red/40 hover:shadow-[0_6px_18px_rgba(163,0,18,0.08)] active:scale-95 transition-all text-brand-gold cursor-pointer"
+          >
+            <QrCode className="w-6 h-6" />
+          </button>
+          <button
+            id="share-card"
+            onClick={handleShare}
+            title="Поделиться визиткой"
+            aria-label="Поделиться визиткой"
+            className="p-3.5 rounded-2xl bg-white border border-brand-gold/25 hover:border-brand-red/40 hover:shadow-[0_6px_18px_rgba(163,0,18,0.08)] active:scale-95 transition-all cursor-pointer"
+          >
+            {copied ? <Check className="w-6 h-6 text-emerald-600" /> : <Share2 className="w-6 h-6 text-brand-gold" />}
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -222,11 +304,10 @@ export default function App() {
             {/* Gold border container */}
             <div className="absolute -inset-1.5 rounded-full border border-brand-gold/30 group-hover:border-brand-red/40 transition-colors duration-700"></div>
             
-            <img 
+            <img
               id="bio-avatar"
-              src="https://placehold.co/120x120/A30012/FFFFFF?text=Polina+Red" 
-              alt="Полина Red" 
-              referrerPolicy="no-referrer"
+              src="/avatar.jpg"
+              alt="Полина Red"
               className="w-[115px] h-[115px] rounded-full border-[3px] border-white object-cover relative z-10 transition-transform duration-700 ease-out group-hover:scale-[1.03] shadow-md bg-white p-0.5"
             />
           </div>
@@ -248,10 +329,26 @@ export default function App() {
             ЗАПИСЬ НА КОНСУЛЬТАЦИЮ ОТКРЫТА
           </div>
 
-          <p id="bio-description" className="font-sans text-[14.5px] leading-relaxed text-brand-dark/95 mt-4 max-w-[370px] font-normal px-2">
+          <p id="bio-description" className="font-sans text-[16px] leading-relaxed text-brand-dark/95 mt-4 max-w-[370px] font-normal px-2">
             Помогаю женщинам снять телесные оковы, пробудить природный магнетизм и войти в тотальную оргазмичность <span className="inline-block hover:scale-125 transition-transform">🌹</span>
           </p>
         </div>
+
+        {/* Подсказка для встроенного браузера Instagram/Facebook */}
+        <AnimatePresence>
+          {contactHint && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="w-full mb-6 px-4 py-3 rounded-2xl bg-brand-gold-light border border-brand-gold/25 text-center"
+            >
+              <p className="text-[12px] leading-relaxed text-brand-dark/90 font-medium">
+                Открой страницу в браузере: <span className="font-bold">⋯</span> вверху → «Открыть в браузере», затем снова нажми «Сохранить контакт».
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Separator */}
         <div className="w-1/3 flex items-center justify-center mb-6">
@@ -332,7 +429,7 @@ export default function App() {
               >
                 {/* Visual Label at the top right header of the card */}
                 {link.cornerLabel && (
-                  <span className={`absolute -top-2 right-4 z-20 text-[8px] uppercase tracking-widest px-2.5 py-0.5 rounded-full font-bold shadow-xs border ${
+                  <span className={`absolute -top-2 right-4 z-20 text-[11px] uppercase tracking-widest px-2.5 py-0.5 rounded-full font-bold shadow-xs border ${
                     link.cornerLabel.style === 'red' 
                       ? 'bg-brand-red text-white border-brand-red' 
                       : link.cornerLabel.style === 'gold'
@@ -375,11 +472,11 @@ export default function App() {
 
                       {/* Multiline Texts */}
                       <div className="flex-grow space-y-1.5 pr-2">
-                        <h3 className="font-sans font-bold text-[15px] text-brand-dark leading-normal tracking-wide group-hover:text-brand-red transition-colors flex items-center gap-1.5">
+                        <h3 className="font-sans font-bold text-[17px] text-brand-dark leading-normal tracking-wide group-hover:text-brand-red transition-colors flex items-center gap-1.5">
                           {link.title}
                           {isFeat && <Flame className="w-3.5 h-3.5 text-brand-red animate-pulse flex-shrink-0" />}
                         </h3>
-                        <p className="text-[12px] leading-relaxed text-brand-muted font-normal">
+                        <p className="text-[13px] leading-relaxed text-brand-muted font-normal">
                           {link.subtitle}
                         </p>
                         
@@ -388,7 +485,7 @@ export default function App() {
                           {link.badges.map((badge, idx) => (
                             <span 
                               key={idx}
-                              className={`text-[9.5px] px-2 py-0.5 rounded-md font-sans tracking-wide font-medium border ${
+                              className={`text-[11px] px-2 py-0.5 rounded-md font-sans tracking-wide font-medium border ${
                                 isFeat 
                                   ? 'bg-brand-red-light/70 border-brand-red/10 text-brand-red' 
                                   : 'bg-brand-gold-light/50 border-brand-gold/10 text-[#7C6636]'
@@ -487,6 +584,49 @@ export default function App() {
           </button>
         </div>
       </footer>
+
+      {/* QR-визитка */}
+      <AnimatePresence>
+        {qrOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center min-h-screen px-6">
+            <motion.div
+              id="qr-backdrop"
+              className="absolute inset-0 bg-brand-dark/50 backdrop-blur-xs"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setQrOpen(false)}
+            />
+            <motion.div
+              id="qr-modal"
+              className="relative w-full max-w-[340px] bg-white rounded-[24px] p-7 text-center z-10 border border-brand-gold/30 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 260 }}
+            >
+              <button
+                id="close-qr"
+                onClick={() => setQrOpen(false)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-full text-brand-muted hover:text-brand-red hover:bg-gray-50 transition-all cursor-pointer"
+                aria-label="Закрыть"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <h3 className="title-font text-lg font-bold text-brand-dark mt-1">QR-визитка</h3>
+              <p className="text-[11px] text-brand-muted mt-1 mb-4">Наведи камеру телефона — контакт сохранится автоматически</p>
+
+              <div className="inline-flex p-3 rounded-2xl bg-white border border-brand-gold/25 shadow-xs">
+                <QRCodeSVG value={vcardString} size={200} level="M" fgColor="#A30012" bgColor="#FFFFFF" />
+              </div>
+
+              <p className="title-font text-[15px] font-bold text-brand-dark mt-4">Полина Red</p>
+              <p className="text-[11px] text-brand-muted mt-0.5">Психолог · Телесность · Сексология</p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Slide-Up Compliance Sheets */}
       <AnimatePresence>
